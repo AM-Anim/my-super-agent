@@ -262,33 +262,71 @@ with tab4:
 # ==========================================
 # TAB 5: Gmail, Sheets, Calendar, Telegram ও WhatsApp কানেক্ট
 # ==========================================
+# === ৫. ওয়েবসাইট ও সিস্টেমে অটো ফর্ম ফিলাপ (Smart Auto-Fill Engine) ===
 with tab5:
-    st.subheader("৫. অ্যাপ অটোমেশন ও মেসেজিং কন্ট্রোল")
-    act = st.selectbox("কোন কাজটি করতে চান?", [
-        "Gmail-এ সরাসরি ইমেইল পাঠান",
-        "Google Sheets-এ নতুন রো (Row) হিসেবে সেভ করুন",
-        "Google Calendar-এ রিমাইন্ডার/ইভেন্ট সেট করুন",
-        "Telegram Bot-এ মেসেজ/নোটিফিকেশন পাঠান",
-        "WhatsApp-এ মেসেজ পাঠান (Direct Link)"
-    ])
-    
-    to_val = st.text_input("প্রাপকের Email / Telegram Chat ID / WhatsApp নম্বর (দেশের কোডসহ, যেমন 88017...):")
-    sub_val = st.text_input("সাবজেক্ট বা শিরোনাম:")
-    body_val = st.text_area("মূল মেসেজ বা ডেটা (Sheets-এর জন্য কমা দিয়ে লিখুন):", value=st.session_state.last_extracted_text)
+    st.subheader("🌐 যেকোনো ওয়েবসাইট বা অফিস সিস্টেমে অটো-ফিলাপ")
 
-    if st.button("🚀 এক ক্লিকে পাঠান / সেভ করুন"):
-        if act.startswith("Telegram"):
-            if not tg_token:
-                st.error("বাম পাশে Telegram Bot Token দিন!")
-            else:
-                r = requests.post(f"https://api.telegram.org/bot{tg_token}/sendMessage", json={"chat_id": to_val, "text": f"{sub_val}\n\n{body_val}"})
-                st.success("টেলিগ্রামে মেসেজ পাঠানো হয়েছে!" if r.status_code == 200 else r.text)
-        elif act.startswith("WhatsApp"):
-            wa_link = f"https://wa.me/{to_val.replace('+', '').strip()}?text={requests.utils.quote(body_val)}"
-            st.markdown(f"👉 **[এখানে ক্লিক করে সরাসরি WhatsApp-এ মেসেজটি পাঠান]({wa_link})**")
+    st.markdown("""
+    **কীভাবে কাজ করবে?**
+    ১. হাতের লেখা বা ফাইল থেকে পাওয়া ডেটা নিচের বক্সে দিন।
+    ২. যে ওয়েবসাইটে ফিলাপ করবেন তার ফিল্ডগুলোর নাম (অথবা ফর্মের একটি স্ক্রিনশট/HTML) দিন।
+    ৩. এজেন্ট আপনাকে **১-ক্লিক অটো-ফিল কোড** বানিয়ে দেবে, যা ব্রাউজারে পেস্ট করলেই পুরো ফর্ম ১ সেকেন্ডে নির্ভুলভাবে পূরণ হয়ে যাবে!
+    """)
+
+    col_w1, col_w2 = st.columns(2)
+    with col_w1:
+        fill_lang = st.radio("ফর্মে কোন ভাষায় ডেটা বসবে?", [
+            "ফাইলে যেভাবে আছে হুবহু সেভাবে",
+            "বাংলায় (Bangla Unicode)",
+            "ইংরেজিতে (English)"
+        ])
+        fill_mode = st.selectbox("অটো-ফিল পদ্ধতি বেছে নিন:", [
+            "Method 1: ১-ক্লিক ব্রাউজার অটো-ফিল (Bookmarklet / Console) - ল্যাপটপ ও মোবাইল",
+            "Method 2: ফর্মের স্ক্রিনশট দেখে স্মার্ট ফিলার (Vision Auto-Fill)",
+            "Method 3: Python Playwright বট (একসাথে অনেক ডেটা এন্ট্রির জন্য)"
+        ])
+
+    with col_w2:
+        form_screenshot = st.file_uploader(
+            "যে ওয়েবসাইটে ফিলাপ করবেন তার খালি ফর্মের স্ক্রিনশট দিন (ঐচ্ছিক, নিখুঁত ম্যাচিংয়ের জন্য):", 
+            type=["png", "jpg", "jpeg"]
+        )
+        field_hints = st.text_input(
+            "অথবা ফর্মের ঘরগুলোর নাম লিখুন (কমা দিয়ে):", 
+            placeholder="যেমন: Name, Phone, Designation, Address, Amount"
+        )
+
+    raw_data_to_fill = st.text_area(
+        "যে ডেটা দিয়ে ফর্ম ফিলাপ করতে হবে তা এখানে পেস্ট করুন (১নং ট্যাব থেকে কপি করা লেখা):", 
+        height=180
+    )
+
+    if st.button("⚡ অটো-ফিল ইঞ্জিন তৈরি করুন"):
+        if not gemini_api or not raw_data_to_fill:
+            st.error("অনুগ্রহ করে Gemini API Key এবং ফিলাপ করার ডেটা দিন!")
         else:
-            if not webhook_url:
-                st.error("বাম পাশে Google Script URL দিন!")
-            else:
-                r = requests.post(webhook_url, json={"action": act, "to": to_val, "subject": sub_val, "body": body_val})
-                st.success(f"সফল! সার্ভার রেসপন্স: {r.text}")
+            with st.spinner("আপনার ডেটা ও ফর্ম বিশ্লেষণ করে অটো-ফিল কোড তৈরি হচ্ছে..."):
+                prompt = f"""
+                You are an expert Web Automation & Form Auto-Fill AI.
+                
+                USER DATA TO FILL:
+                {raw_data_to_fill}
+                
+                LANGUAGE REQUIREMENT: {fill_lang}
+                TARGET FORM FIELDS HINT: {field_hints}
+                SELECTED METHOD: {fill_mode}
+                
+                TASKS:
+                1. First, extract and structure the user data into clean Key-Value pairs (JSON format) in the requested language ({fill_lang}).
+                2. For Method 1 or 2: Generate a universal, smart JavaScript Auto-Fill snippet that searches the webpage for matching input/textarea/select fields (by label text, placeholder, name, or id) and automatically fills them with the exact values, triggering 'input' and 'change' events so modern React/Angular/ERP systems accept the values.
+                3. Also provide a single-line `javascript:(function(){{...}})();` Bookmarklet version so the user can save it as a bookmark and fill the form in 1 click on Mobile or PC.
+                4. If Method 3 is selected, provide a complete Python `playwright` script to automate the entry.
+                5. Explain the usage steps briefly in clear Bangla.
+                """
+                
+                inputs = [prompt]
+                if form_screenshot:
+                    inputs.append(Image.open(form_screenshot))
+                
+                res = model.generate_content(inputs)
+                st.markdown(res.text)
